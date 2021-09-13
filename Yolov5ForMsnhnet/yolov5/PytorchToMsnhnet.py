@@ -14,9 +14,6 @@ ccc = []
 index   = 0
 m_weights = []
 
-class Msnhnet:
-    Debug = False
-
 class Hook(object):
     hookInited = False
     def __init__(self,raw,replace,**kwargs):
@@ -1180,6 +1177,7 @@ for t in [torch.Tensor]:
     t.expand_as = _expand_as
 
 def trans(net, inputVar, msnhnet_path, msnhbin_path):
+    Msnhnet.Export = True
     Hook.hookInited = True
     msnhnet.buildConfig(str(id(inputVar)), inputVar.size())
     net.forward(inputVar)

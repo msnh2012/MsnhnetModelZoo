@@ -3,7 +3,11 @@ import math
 
 import torch
 import torch.nn as nn
-from PytorchToMsnhnet import *
+
+from MsnhBuilder import*
+
+if Msnhnet.Export :
+    from PytorchToMsnhnet import *
 
 def autopad(k, p=None):  # kernel, padding
     # Pad to 'same'
@@ -102,8 +106,9 @@ class Focus(nn.Module):
         self.conv = Conv(c1 * 4, c2, k, s, p, g, act)
 
     def forward(self, x):  # x(b,c,w,h) -> y(b,4c,w/2,h/2)
-        tmp = Hook.hookInited
-        Hook.hookInited = False
+        if Msnhnet.Export :
+            tmp = Hook.hookInited
+            Hook.hookInited = False
 
         x1 = x[..., ::2, ::2]
         x2 = x[..., 1::2, ::2]
@@ -111,16 +116,17 @@ class Focus(nn.Module):
         x4 = x[..., 1::2, 1::2]
         y = torch.cat([x1, x2, x3, x4], 1)
 
-        msnhnet.buildActivation("activate","linear",x.shape,x.shape)
-        msnhnet.buildSlice("slice1",0,1,0,2,0,2)
-        msnhnet.buildRoute("route","-2",False)
-        msnhnet.buildSlice("slice2",0,1,1,2,0,2)
-        msnhnet.buildRoute("route","-4",False)
-        msnhnet.buildSlice("slice3",0,1,0,2,1,2)
-        msnhnet.buildRoute("route","-6",False)
-        msnhnet.buildSlice("slice4",0,1,1,2,1,2)
-        msnhnet.buildRoute(str(y._cdata),"-7,-5,-3,-1",False)
-        Hook.hookInited = tmp
+        if Msnhnet.Export :
+            msnhnet.buildActivation("activate","linear",x.shape,x.shape)
+            msnhnet.buildSlice("slice1",0,1,0,2,0,2)
+            msnhnet.buildRoute("route","-2",False)
+            msnhnet.buildSlice("slice2",0,1,1,2,0,2)
+            msnhnet.buildRoute("route","-4",False)
+            msnhnet.buildSlice("slice3",0,1,0,2,1,2)
+            msnhnet.buildRoute("route","-6",False)
+            msnhnet.buildSlice("slice4",0,1,1,2,1,2)
+            msnhnet.buildRoute(str(y._cdata),"-7,-5,-3,-1",False)
+            Hook.hookInited = tmp
         z = self.conv(y)
         return z
 

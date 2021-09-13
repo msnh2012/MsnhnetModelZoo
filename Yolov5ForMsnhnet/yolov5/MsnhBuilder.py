@@ -13,6 +13,8 @@ def unique_index(L,e):
     return id
     
 class Msnhnet:
+    Export = False
+    Debug = False
     msnh_layer_cnt = -1
     def __init__(self):
         self.inAddr = ""

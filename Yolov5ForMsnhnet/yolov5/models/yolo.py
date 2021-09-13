@@ -7,7 +7,10 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-from PytorchToMsnhnet import *
+from MsnhBuilder import*
+
+if Msnhnet.Export :
+    from PytorchToMsnhnet import *
 
 from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP, Concat
 from models.experimental import MixConv2d, CrossConv, C3
@@ -39,20 +42,26 @@ class Detect(nn.Module):
         # x = x.copy()  # for profiling
         z = []  # inference output
         self.training |= self.export
-        tmp = Hook.hookInited
-        for i in range(self.nl):
-            Hook.hookInited = tmp
-            x[i] = self.m[i](x[i])  # conv
-            Hook.hookInited = False
 
-            ac = self.anchors[i]*self.stride[i]
-            ac = ac.flatten().tolist()
-            acStr = ""
-            for st in range(len(ac)):
-                acStr += (str(ac[st])+",")
-            
-            acStr = acStr[0:-1]
-            msnhnet.buildYolo("yolov5_"+str(i),acStr,self.nc,"yolov5")
+        if Msnhnet.Export :
+            tmp = Hook.hookInited
+        for i in range(self.nl):
+            if Msnhnet.Export :
+                Hook.hookInited = tmp
+
+            x[i] = self.m[i](x[i])  # conv
+
+            if Msnhnet.Export :
+                Hook.hookInited = False
+
+            if Msnhnet.Export :
+                ac = self.anchors[i]*self.stride[i]
+                ac = ac.flatten().tolist()
+                acStr = ""
+                for st in range(len(ac)):
+                    acStr += (str(ac[st])+",")
+                acStr = acStr[0:-1]
+                msnhnet.buildYolo("yolov5_"+str(i),acStr,self.nc,"yolov5")
 
             bs, _, ny, nx = x[i].shape  # x(bs,255,20,20) to x(bs,3,20,20,85)
             x[i] = x[i].view(bs, self.na, self.no, ny, nx).permute(0, 1, 3, 4, 2).contiguous()
@@ -66,8 +75,10 @@ class Detect(nn.Module):
                 y[..., 2:4] = (y[..., 2:4] * 2) ** 2 * self.anchor_grid[i]  # wh
                 z.append(y.view(bs, -1, self.no))
         y = x if self.training else (torch.cat(z, 1), x)
-        yololayers =  str(msnhnet.getIndexFromName("yolov5_0"))+","+str(msnhnet.getIndexFromName("yolov5_1"))+","+str(msnhnet.getIndexFromName("yolov5_2"))
-        msnhnet.buildYoloOut("yolov5Out",yololayers,"yolov5")
+        
+        if Msnhnet.Export :
+            yololayers =  str(msnhnet.getIndexFromName("yolov5_0"))+","+str(msnhnet.getIndexFromName("yolov5_1"))+","+str(msnhnet.getIndexFromName("yolov5_2"))
+            msnhnet.buildYoloOut("yolov5Out",yololayers,"yolov5")
         return y
         
     @staticmethod
@@ -160,8 +171,8 @@ class Model(nn.Module):
         m = self.model[-1]  # Detect() module
         for mi, s in zip(m.m, m.stride):  # from
             b = mi.bias.view(m.na, -1)  # conv.bias(255) to (3,85)
-            b[:, 4] += math.log(8 / (640 / s) ** 2)  # obj (8 objects per 640 image)
-            b[:, 5:] += math.log(0.6 / (m.nc - 0.99)) if cf is None else torch.log(cf / cf.sum())  # cls
+            b.data[:, 4] += math.log(8 / (640 / s) ** 2)  # obj (8 objects per 640 image)
+            b.data[:, 5:] += math.log(0.6 / (m.nc - 0.99)) if cf is None else torch.log(cf / cf.sum())  # cls
             mi.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
 
     def _print_biases(self):
