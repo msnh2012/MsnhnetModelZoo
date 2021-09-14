@@ -1177,7 +1177,6 @@ for t in [torch.Tensor]:
     t.expand_as = _expand_as
 
 def trans(net, inputVar, msnhnet_path, msnhbin_path):
-    Msnhnet.Export = True
     Hook.hookInited = True
     msnhnet.buildConfig(str(id(inputVar)), inputVar.size())
     net.forward(inputVar)
