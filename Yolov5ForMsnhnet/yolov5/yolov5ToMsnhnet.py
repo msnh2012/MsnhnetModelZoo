@@ -12,4 +12,4 @@ model.eval() # cpu模式，推理模式
 
 img = torch.rand(512*512*3).reshape(1,3,512,512) #生成随机推理数据
  
-tans(model,img,msnhnetPath,msnhbinPath) #模型转换
+trans(model,img,msnhnetPath,msnhbinPath) #模型转换
